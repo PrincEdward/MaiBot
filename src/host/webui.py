@@ -94,6 +94,15 @@ def create_host_app(
                 return JSONResponse(status_code=503, content={"detail": "宿主正在关闭"})
         response = await call_next(request)
         if request.url.path.startswith("/api/"):
+            # Keep the browser's persistent cookie fresh without extending revoked sessions.
+            # Login/logout/password-change handlers own any cookie they set themselves.
+            current_session = request.cookies.get(sessions.cookie_name)
+            cookie_already_set = any(
+                value.startswith(sessions.cookie_name + "=")
+                for value in response.headers.getlist("set-cookie")
+            )
+            if response.status_code < 400 and not cookie_already_set and sessions.valid(current_session):
+                sessions.set_cookie(response, current_session)
             # 静态资源由 static_response 决定缓存策略；接口响应一律不缓存。
             response.headers["Cache-Control"] = "no-store"
         response.headers["Referrer-Policy"] = "no-referrer"
@@ -149,7 +158,8 @@ def create_host_app(
 
     @app.post("/api/host/session")
     async def login(body: SessionRequest, request: Request, response: Response) -> Dict[str, bool]:
-        session = await asyncio.to_thread(sessions.exchange, body.ticket, request.headers.get("origin"))
+        session = await asyncio.to_thread(sessions.exchange, body.ticket, request.headers.get("origin"),
+                                         request.cookies.get(sessions.cookie_name))
         sessions.set_cookie(response, session)
         return {"authenticated": True}
 

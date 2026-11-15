@@ -16,7 +16,10 @@ import time
 from .authentication import HostCredentials
 
 
-_SESSION_SECONDS = 8 * 60 * 60
+# User-selected permanent server sessions. Zero is an explicit non-expiring marker.
+_PERMANENT_EXPIRY = 0.0
+# Chromium caps persistent cookies at 400 days; authenticated API traffic renews this.
+_COOKIE_SECONDS = 400 * 24 * 60 * 60
 _TICKET_SECONDS = 60
 _MAX_TICKETS = 64
 _MAX_SESSIONS = 64
@@ -50,7 +53,10 @@ class HostSessions:
             # 临时密码每次启动都会轮换，不恢复上一进程的登录。
             if credentials.token_source == "temporary":
                 db.execute("DELETE FROM sessions")
-            db.execute("DELETE FROM sessions WHERE expires_at <= ?", (time.time(),))
+            now = time.time()
+            db.execute("DELETE FROM sessions WHERE expires_at != 0 AND expires_at <= ?", (now,))
+            # Promote only still-valid legacy sessions; never revive an expired login.
+            db.execute("UPDATE sessions SET expires_at = 0 WHERE expires_at > ?", (now,))
             self._sessions: Dict[str, _Session] = {
                 digest: _Session(expires_at, origin)
                 for digest, expires_at, origin in db.execute("SELECT digest, expires_at, origin FROM sessions")
@@ -74,26 +80,31 @@ class HostSessions:
             self._tickets[ticket] = time.monotonic() + _TICKET_SECONDS
             return ticket
 
-    def exchange(self, ticket: str, origin: Optional[str] = None) -> str:
+    def exchange(self, ticket: str, origin: Optional[str] = None, existing_session: Optional[str] = None) -> str:
         with self._lock:
             self._prune(self._tickets, time.monotonic())
             if ticket not in self._tickets:
                 raise HTTPException(401, "登录链接已失效，请使用 WebUI 密码登录")
-            session = self.create_session(origin)
+            session = self.create_session(origin, existing_session)
             del self._tickets[ticket]
             return session
 
-    def create_session(self, origin: Optional[str] = None) -> str:
+    def create_session(self, origin: Optional[str] = None, existing_session: Optional[str] = None) -> str:
         with self._lock:
+            # Reopening the desktop must not consume one permanent slot per launch.
+            existing = self._active_session(existing_session)
+            if existing_session and existing and existing.origin == origin:
+                return existing_session
             now = time.time()
-            self._sessions = {key: record for key, record in self._sessions.items() if record.expires_at > now}
+            self._sessions = {key: record for key, record in self._sessions.items()
+                              if record.expires_at == _PERMANENT_EXPIRY or record.expires_at > now}
             if len(self._sessions) >= _MAX_SESSIONS:
                 raise HTTPException(429, "登录会话过多，请稍后再试")
             session = secrets.token_urlsafe(32)
             digest = self._digest(session)
-            expires_at = now + _SESSION_SECONDS
+            expires_at = _PERMANENT_EXPIRY
             with closing(sqlite3.connect(self._path)) as db, db:
-                db.execute("DELETE FROM sessions WHERE expires_at <= ?", (now,))
+                db.execute("DELETE FROM sessions WHERE expires_at != 0 AND expires_at <= ?", (now,))
                 db.execute("INSERT INTO sessions (digest, expires_at, origin) VALUES (?, ?, ?)", (digest, expires_at, origin))
             # 提交成功后才发布内存状态；写失败不能签发无法恢复的 Cookie。
             self._sessions[digest] = _Session(expires_at, origin)
@@ -101,7 +112,7 @@ class HostSessions:
 
     def _active_session(self, session: Optional[str]) -> Optional[_Session]:
         record = self._sessions.get(self._digest(session)) if session else None
-        return record if record and record.expires_at > time.time() else None
+        return record if record and (record.expires_at == _PERMANENT_EXPIRY or record.expires_at > time.time()) else None
 
     def login_origin(self, session: Optional[str]) -> Optional[str]:
         record = self._active_session(session)
@@ -109,7 +120,7 @@ class HostSessions:
 
     def set_cookie(self, response: Response, session: str) -> None:
         response.set_cookie(
-            self.cookie_name, session, max_age=_SESSION_SECONDS, httponly=True,
+            self.cookie_name, session, max_age=_COOKIE_SECONDS, httponly=True,
             samesite="lax", path="/", secure=self.secure_cookie,
         )
 

@@ -51,7 +51,8 @@ def register_host_auth(
             raise HTTPException(429, str(exc)) from exc
         if not valid:
             return {"valid": False, "message": "Token 无效或已过期"}
-        sessions.set_cookie(response, await asyncio.to_thread(sessions.create_session, request.headers.get("origin")))
+        sessions.set_cookie(response, await asyncio.to_thread(sessions.create_session, request.headers.get("origin"),
+                                                             request.cookies.get(sessions.cookie_name)))
         return {"valid": True, "message": "登录成功", **credentials.setup_status()}
 
     @app.post("/api/webui/auth/logout")
