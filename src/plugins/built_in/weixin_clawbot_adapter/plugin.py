@@ -183,3 +183,8 @@ WeixinClawbotPlugin = type("WeixinClawbotPlugin", (WeixinClawbotPlugin,), {
 
 def create_plugin() -> WeixinClawbotPlugin:
     return WeixinClawbotPlugin()
+
+
+# Local Chinese configuration display; does not change stored settings.
+from .config_zh import install as _install_config_zh
+_install_config_zh(WeixinClawbotPlugin)

@@ -1,0 +1,128 @@
+{
+  "sections": {
+    "plugin": {
+      "title": "插件",
+      "description": "",
+      "fields": {
+        "enabled": {
+          "label": "启用插件",
+          "description": "启用 QQ 官方机器人连接"
+        },
+        "config_version": {
+          "label": "配置格式版本",
+          "description": "配置文件的结构版本，用于插件兼容与迁移；通常保持原值。",
+          "hint": "这是配置格式版本，不是模型版本，也不是插件开关。"
+        }
+      }
+    },
+    "qq_official": {
+      "title": "QQ 开放平台",
+      "description": "",
+      "fields": {
+        "app_id": {
+          "label": "应用编号",
+          "description": "填写QQ开放平台为机器人分配的应用编号。它不是个人QQ号。",
+          "hint": "填写QQ开放平台为机器人分配的应用编号。它不是个人QQ号。"
+        },
+        "app_secret": {
+          "label": "应用密钥",
+          "description": "填写QQ开放平台对应应用的密钥，需与应用编号配对。",
+          "hint": "填写QQ开放平台对应应用的密钥，需与应用编号配对。"
+        },
+        "api_base_url": {
+          "label": "接口基础地址",
+          "description": "QQ 开放平台 接口 地址"
+        }
+      }
+    },
+    "mute": {
+      "title": "禁言工具",
+      "description": "",
+      "fields": {
+        "enabled": {
+          "label": "启用禁言工具",
+          "description": "允许模型使用禁言或解除禁言工具；时长为0表示解除禁言。",
+          "hint": "允许模型使用禁言或解除禁言工具；时长为0表示解除禁言。"
+        },
+        "allowed_groups": {
+          "label": "允许使用的群",
+          "description": "允许使用禁言与解除禁言的群（统一群号或 group_openid）；留空不限制"
+        },
+        "admin_users": {
+          "label": "禁言保护名单",
+          "description": "禁言保护名单（统一 QQ 号或 OpenID），名单内用户不会被禁言"
+        },
+        "min_duration": {
+          "label": "最短禁言时长（秒）",
+          "description": "最短禁言时长（秒）"
+        },
+        "max_duration": {
+          "label": "最长禁言时长（秒）",
+          "description": "最长禁言时长（秒），官方上限 30 天"
+        }
+      }
+    },
+    "recall": {
+      "title": "撤回工具",
+      "description": "",
+      "fields": {
+        "enabled": {
+          "label": "启用撤回工具",
+          "description": "关闭后不再向模型提供撤回消息的工具。",
+          "hint": "关闭后不再向模型提供撤回消息的工具。"
+        },
+        "allowed_groups": {
+          "label": "允许使用的群",
+          "description": "允许使用撤回的群（统一群号或 group_openid）；留空不限制，单聊不受此限制"
+        }
+      }
+    },
+    "filter": {
+      "title": "消息过滤",
+      "description": "",
+      "fields": {
+        "ignore_other_bots": {
+          "label": "屏蔽其他机器人消息",
+          "description": "忽略其它机器人发送的消息（官方事件的 author.bot=true，例如群里另一个官方机器人）"
+        }
+      }
+    },
+    "advanced": {
+      "title": "高级设置",
+      "description": "",
+      "fields": {
+        "show_debug_info": {
+          "label": "显示调试信息",
+          "description": "在日志中逐条显示消息按主动还是被动方式发送；被动发送同时显示目标消息 ID 和回复序号"
+        },
+        "reconnect_delay_sec": {
+          "label": "断线重连间隔（秒）",
+          "description": "断线后等待多久重新连接，单位为秒"
+        }
+      }
+    },
+    "other_source_sync": {
+      "title": "其他来源信息同步",
+      "description": "",
+      "fields": {
+        "unified_account_id": {
+          "label": "关联QQ号",
+          "description": "统一账号 ID（如 NapCat 机器人 QQ 号）；非空时聊天流按此 ID 归属，与其它 qq 适配器共享上下文"
+        },
+        "silent_user_sync": {
+          "label": "静默同步群成员身份",
+          "description": "在已绑定群中与 SnowLuma 静默匹配 QQ 号、昵称和群名片；需填写关联QQ号，三条不同正文一致后生效"
+        },
+        "snowluma_identity_only": {
+          "label": "兼容客户端仅用于身份查询",
+          "description": "官方连接就绪时，让关联的兼容客户端只采集身份资料，暂停其消息收发，避免重复发送。15秒没有续期会自动恢复。",
+          "hint": "官方连接就绪时，让关联的兼容客户端只采集身份资料，暂停其消息收发，避免重复发送。15秒没有续期会自动恢复。"
+        }
+      }
+    }
+  },
+  "plugin_info": {
+    "name": "QQ 官方机器人适配器",
+    "description": "直连 QQ 开放平台官方 接口，支持群聊与单聊的文本、@、图片、表情、语音收发及视频、文件发送，提供禁言、解除禁言、撤回工具。"
+  }
+}

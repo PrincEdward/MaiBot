@@ -653,3 +653,8 @@ class TelegramAdapterPlugin(MaiBotPlugin):
 
 def create_plugin() -> TelegramAdapterPlugin:
     return TelegramAdapterPlugin()
+
+
+# Local Chinese configuration display; does not change stored settings.
+from .config_zh import install as _install_config_zh
+_install_config_zh(TelegramAdapterPlugin)

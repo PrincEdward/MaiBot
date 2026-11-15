@@ -1,0 +1,72 @@
+{
+  "sections": {
+    "plugin": {
+      "title": "插件",
+      "description": "",
+      "fields": {
+        "enabled": {
+          "label": "启用插件",
+          "description": "启用麦麦小工具"
+        },
+        "config_version": {
+          "label": "配置格式版本",
+          "description": "配置文件的结构版本，用于插件兼容与迁移；通常保持原值。",
+          "hint": "这是配置格式版本，不是模型版本，也不是插件开关。"
+        }
+      }
+    },
+    "typo": {
+      "title": "错别字生成",
+      "description": "设置错别字生成方式、概率和纠正消息。",
+      "fields": {
+        "mode": {
+          "label": "错别字生成模式",
+          "description": "规则模式按拼音和字频生成错字，词库模式只使用内置的易混词对。",
+          "choices": {
+            "choice:rule": "规则模式",
+            "choice:dictionary": "词库模式"
+          }
+        },
+        "dictionary_probability": {
+          "label": "词库模式每次回复的错字概率",
+          "description": "仅词库模式使用。命中词库时，每次回复最多替换一处。",
+          "hint": "填写0到1的小数；例如0.9表示90%，不是填写90。"
+        },
+        "enable_correction_quote": {
+          "label": "错别字纠正时引用原消息",
+          "description": "发送错字纠正消息时，允许引用发生错字的原消息。",
+          "hint": "发送错字纠正消息时，允许引用发生错字的原消息。"
+        },
+        "correction_quote_probability": {
+          "label": "错别字纠正引用概率",
+          "description": "仅在开启上方“纠正时引用原消息”后生效。0.5 表示约一半的纠正消息使用引用。",
+          "hint": "仅在开启上方“纠正时引用原消息”后生效。0.5 表示约一半的纠正消息使用引用。"
+        },
+        "error_rate": {
+          "label": "单字错字概率",
+          "description": "规则模式下单个字出现错字的概率；调高会让整条消息更容易出现错字。",
+          "hint": "规则模式下单个字出现错字的概率；调高会让整条消息更容易出现错字。"
+        },
+        "min_freq": {
+          "label": "最小字频",
+          "description": "替换候选字的最低使用频率；提高后更偏向常见字。",
+          "hint": "替换候选字的最低使用频率；提高后更偏向常见字。"
+        },
+        "tone_error_rate": {
+          "label": "声调错字概率",
+          "description": "规则模式生成错字时，允许声调也发生变化的概率。",
+          "hint": "规则模式生成错字时，允许声调也发生变化的概率。"
+        },
+        "word_replace_rate": {
+          "label": "整词替换概率",
+          "description": "规则模式下用易混词替换整词的概率。",
+          "hint": "规则模式下用易混词替换整词的概率。"
+        }
+      }
+    }
+  },
+  "plugin_info": {
+    "name": "麦麦小工具",
+    "description": "麦麦的一些小巧思拟人化功能"
+  }
+}

@@ -2,7 +2,7 @@
   "manifest_version": 2,
   "id": "maibot-team.weixin-clawbot-adapter",
   "version": "0.2.0",
-  "name": "微信 ClawBot 适配器",
+  "name": "微信机器人适配器",
   "display": {
     "icon": {
       "type": "local",

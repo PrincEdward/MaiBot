@@ -85,3 +85,8 @@ class ChineseTypoPlugin(MaiBotPlugin):
 
 def create_plugin() -> ChineseTypoPlugin:
     return ChineseTypoPlugin()
+
+
+# Local Chinese configuration display; does not change stored settings.
+from .config_zh import install as _install_config_zh
+_install_config_zh(ChineseTypoPlugin)

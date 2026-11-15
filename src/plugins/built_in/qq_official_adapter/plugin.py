@@ -1812,3 +1812,8 @@ class QQOfficialAdapterPlugin(MaiBotPlugin):
 
 def create_plugin() -> QQOfficialAdapterPlugin:
     return QQOfficialAdapterPlugin()
+
+
+# Local Chinese configuration display; does not change stored settings.
+from .config_zh import install as _install_config_zh
+_install_config_zh(QQOfficialAdapterPlugin)

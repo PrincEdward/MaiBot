@@ -1,0 +1,59 @@
+{
+  "sections": {
+    "plugin": {
+      "title": "插件",
+      "description": "",
+      "fields": {
+        "enabled": {
+          "label": "启用插件",
+          "description": "启用 Telegram 机器人连接"
+        },
+        "config_version": {
+          "label": "配置格式版本",
+          "description": "配置文件的结构版本，用于插件兼容与迁移；通常保持原值。",
+          "hint": "这是配置格式版本，不是模型版本，也不是插件开关。"
+        }
+      }
+    },
+    "telegram": {
+      "title": "电报机器人连接",
+      "description": "",
+      "fields": {
+        "bot_token": {
+          "label": "机器人访问令牌",
+          "description": "填写在官方机器人管理账号 BotFather 申请得到的令牌。",
+          "hint": "填写在官方机器人管理账号 BotFather 申请得到的令牌。"
+        },
+        "api_base_url": {
+          "label": "接口基础地址",
+          "description": "一般保持默认；自建机器人接口服务时才修改。",
+          "hint": "一般保持默认；自建机器人接口服务时才修改。"
+        },
+        "proxy_url": {
+          "label": "代理地址",
+          "description": "HTTP/SOCKS5 代理地址；留空直连，不读取环境代理"
+        },
+        "poll_timeout_sec": {
+          "label": "长轮询等待时间（秒）",
+          "description": "长轮询等待时间（秒）"
+        },
+        "reconnect_delay_sec": {
+          "label": "重连等待时间（秒）",
+          "description": "网络故障后重试间隔（秒）"
+        },
+        "max_download_mb": {
+          "label": "单个媒体下载上限（兆字节）",
+          "description": "单个媒体下载上限（MB）；云端 Bot 接口 下载上限为 20 MB"
+        },
+        "media_timeout_sec": {
+          "label": "媒体转换超时（秒）",
+          "description": "媒体转换超时（秒）"
+        }
+      }
+    }
+  },
+  "plugin_info": {
+    "name": "电报机器人适配器",
+    "description": "单账号 Telegram Bot 接口 适配器，支持论坛话题、文本、图片、静态/动画/视频贴纸、语音、@、回复引用和转发。"
+  }
+}
