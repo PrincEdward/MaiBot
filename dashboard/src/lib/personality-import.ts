@@ -3,6 +3,7 @@ export interface PersonalityProfile {
   personality: string
   behavior_style: string
   reply_style: string
+  live_chat_prompt: string
   group_chat_prompt: string
   private_chat_prompts: string
   multiple_reply_style: string[]
@@ -11,6 +12,7 @@ export interface PersonalityProfile {
 
 export const PERSONALITY_IMPORT_LIMIT = 65536
 export const PERSONALITY_IMPORT_EVENT = 'maibot:personality-import'
+const DEFAULT_LIVE_CHAT_PROMPT = "你正在B站直播间用弹幕聊天。保持当前人设，顺着主播和观众正在聊的内容自然接话。每次只发一条纯文字短句，20字以内；不输出动作描写、昵称前缀、图片或表情包。区分主播、观众和直播音频转写；转写可能有误且说话人未确认，不要把所有声音当成主播。无需逐条回应，不刷屏，不强行找话题；是否发言和何时回复按当前聊天状态判断。这是公开直播间，不透露私聊内容或个人隐私。"
 const PENDING_KEY = 'maibot-personality-import-v1'
 
 export const PERSONALITY_IMPORT_EXAMPLE = JSON.stringify({
@@ -21,6 +23,7 @@ export const PERSONALITY_IMPORT_EXAMPLE = JSON.stringify({
     personality: '温柔、好奇，喜欢和朋友分享日常。',
     behavior_style: '自然参与聊天，认真倾听，不强行找话题。',
     reply_style: '简短自然，语气温和。',
+    live_chat_prompt: DEFAULT_LIVE_CHAT_PROMPT,
     group_chat_prompt: '留意群友之间的互动，适时参与，不必逐条回复。',
     private_chat_prompts: '关注对方的想法，保持自然连贯的一对一交流。',
     multiple_reply_style: ['偶尔用一句俏皮话回复'],
@@ -46,7 +49,7 @@ export function parsePersonalityImport(text: string): PersonalityProfile {
   }
   const profile = data.profile
   if (!object(profile)) throw new Error('profile 必须是人设对象')
-  const fields = ['name', 'personality', 'behavior_style', 'reply_style', 'group_chat_prompt', 'private_chat_prompts', 'multiple_reply_style', 'multiple_probability']
+  const fields = ['name', 'personality', 'behavior_style', 'reply_style', 'live_chat_prompt', 'group_chat_prompt', 'private_chat_prompts', 'multiple_reply_style', 'multiple_probability']
   if (Object.keys(profile).some((key) => !fields.includes(key))) throw new Error('profile 中包含不支持的字段')
   for (const key of ['name', 'personality', 'behavior_style', 'reply_style']) {
     if (typeof profile[key] !== 'string') throw new Error(`${key} 必须是字符串`)
@@ -55,6 +58,7 @@ export function parsePersonalityImport(text: string): PersonalityProfile {
   for (const key of ['group_chat_prompt', 'private_chat_prompts']) {
     if (typeof profile[key] !== 'string') throw new Error(`${key} 必须是字符串`)
   }
+  if (profile.live_chat_prompt !== undefined && typeof profile.live_chat_prompt !== 'string') throw new Error('live_chat_prompt 必须是字符串')
   if (!name) throw new Error('人设名称不能为空')
   const styles = profile.multiple_reply_style === undefined ? [] : profile.multiple_reply_style
   if (!Array.isArray(styles) || !styles.every((style) => typeof style === 'string')) {
@@ -69,6 +73,7 @@ export function parsePersonalityImport(text: string): PersonalityProfile {
     personality: profile.personality as string,
     behavior_style: profile.behavior_style as string,
     reply_style: profile.reply_style as string,
+    live_chat_prompt: profile.live_chat_prompt === undefined ? DEFAULT_LIVE_CHAT_PROMPT : profile.live_chat_prompt as string,
     group_chat_prompt: profile.group_chat_prompt as string,
     private_chat_prompts: profile.private_chat_prompts as string,
     multiple_reply_style: styles,

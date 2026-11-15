@@ -49,7 +49,7 @@ from src.llm_models.payload_content.context_snapshot import (
     serialize_context_items_snapshot,
 )
 from src.maisaka.scenes.base import ChatScene
-from src.maisaka.scenes.factory import get_scene, get_session_scene
+from src.maisaka.scenes.factory import get_prompt_profile, get_scene, get_session_scene
 from src.maisaka.context.message_adapter import parse_speaker_content
 from src.maisaka.context.messages import (
     IMAGE_QUALITY_MAX_SIDE,
@@ -416,7 +416,9 @@ class BaseMaisakaReplyGenerator(RetroReplyPromptMixin):
         if not session_id:
             return ""
         scene = self._get_reply_scene(session_id)
-        return scene.prompts.replyer_attention_block(self._get_chat_prompt_for_chat(session_id, scene.is_group))
+        return get_prompt_profile(scene.is_group, session_id).replyer_attention_block(
+            self._get_chat_prompt_for_chat(session_id, scene.is_group)
+        )
 
     @staticmethod
     def _get_prompt_locale() -> str:

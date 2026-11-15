@@ -667,7 +667,7 @@ class MaisakaChatLoopService:
         """
         self._model_task_name = model_task_name.strip() or "planner"
         self._is_group_chat = is_group_chat
-        self._scene_prompts = get_prompt_profile(is_group_chat)
+        self._scene_prompts = get_prompt_profile(is_group_chat, session_id or "")
         self._session_id = session_id or ""
         self._bot_platform = ""
         self._bot_platform_nickname = ""

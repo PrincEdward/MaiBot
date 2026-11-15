@@ -22,6 +22,16 @@ describe('personality import', () => {
   })
 
 
+  it('imports old profiles and retains a custom live room prompt', () => {
+    const data = JSON.parse(PERSONALITY_IMPORT_EXAMPLE)
+    delete data.profile.live_chat_prompt
+    expect(parsePersonalityImport(JSON.stringify(data)).live_chat_prompt).toContain('直播间')
+    data.profile.live_chat_prompt = '直播自定义'
+    expect(parsePersonalityImport(JSON.stringify(data)).live_chat_prompt).toBe('直播自定义')
+    data.profile.live_chat_prompt = 12
+    expect(() => parsePersonalityImport(JSON.stringify(data))).toThrow()
+  })
+
   it.each([
     (data: ImportFixture) => { data.version = 2 },
     (data: ImportFixture) => { delete data.profile.group_chat_prompt },

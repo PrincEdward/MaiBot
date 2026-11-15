@@ -5,6 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from time import time
 from typing import Sequence
+import asyncio
 
 from src.chat.message_receive.chat_manager import BotChatSession, chat_manager
 from src.chat.message_receive.message import SessionMessage
@@ -12,6 +13,7 @@ from src.common.data_models.message_component_data_model import AtComponent, Rep
 from src.common.logger import get_logger
 from src.common.message_repository import count_messages, find_messages
 from src.common.prompt_i18n import load_prompt
+from src.common.utils.utils_config import AMemorixConfigUtils
 from src.config.config import global_config
 from src.maisaka.scenes.factory import get_scene
 from src.person_info.person_info import get_person_id
@@ -191,12 +193,14 @@ class HeuristicMemoryInjector:
         if not result.success or result.filtered:
             return []
 
+        # Reuse the native explicit sharing groups. Resolve persisted sessions outside the event loop.
+        shared_group_ids = await asyncio.to_thread(self._shared_group_session_ids, context.session)
         resolved_sources = await self._resolve_hit_sources_by_hash(result.hits)
         filtered: list[MemoryHit] = []
         seen_hashes: set[str] = set()
         for hit in result.hits:
             resolved_source = resolved_sources.get(hit.hash_value, "")
-            if not self._is_hit_allowed(hit, context, resolved_source=resolved_source):
+            if not self._is_hit_allowed(hit, context, resolved_source=resolved_source, shared_group_ids=shared_group_ids):
                 continue
             dedup_key = hit.hash_value or hit.content
             if dedup_key in seen_hashes:
@@ -251,6 +255,7 @@ class HeuristicMemoryInjector:
         context: HeuristicMemoryContext,
         *,
         resolved_source: str = "",
+        shared_group_ids: frozenset[str] = frozenset(),
     ) -> bool:
         metadata = hit.metadata if isinstance(hit.metadata, dict) else {}
         source = str(metadata.get("source") or resolved_source or hit.source or "").strip()
@@ -266,17 +271,19 @@ class HeuristicMemoryInjector:
 
         if hit.hit_type == "episode":
             episode_source = str(metadata.get("source") or "").strip()
-            return episode_source == f"{_SOURCE_CHAT_SUMMARY_PREFIX}{context.session.session_id}"
+            return episode_source in {
+                f"{_SOURCE_CHAT_SUMMARY_PREFIX}{sid}" for sid in (context.session.session_id, *shared_group_ids)
+            }
 
         if source_type == "person_fact" or source.startswith(_SOURCE_PERSON_FACT_PREFIX):
             return bool(person_id and person_id in context.active_person_ids)
 
         if source_type == "chat_summary" or source.startswith(_SOURCE_CHAT_SUMMARY_PREFIX):
             source_session_id = self._resolve_source_session_id(source=source, chat_id=chat_id)
-            return self._is_chat_memory_allowed(source_session_id, context.session)
+            return source_session_id in shared_group_ids or self._is_chat_memory_allowed(source_session_id, context.session)
 
         if chat_id:
-            return self._is_chat_memory_allowed(chat_id, context.session)
+            return chat_id in shared_group_ids or self._is_chat_memory_allowed(chat_id, context.session)
         return False
 
     @staticmethod
@@ -286,6 +293,19 @@ class HeuristicMemoryInjector:
         if source.startswith(_SOURCE_CHAT_SUMMARY_PREFIX):
             return source[len(_SOURCE_CHAT_SUMMARY_PREFIX) :].strip()
         return ""
+
+    @staticmethod
+    def _shared_group_session_ids(current_session: BotChatSession) -> frozenset[str]:
+        """Explicit group-to-group sharing never enables general cross-chat/private recall."""
+        if not current_session.is_group_session:
+            return frozenset()
+        shared = AMemorixConfigUtils.get_shared_memory_session_ids(current_session.session_id)
+        groups = []
+        for session_id in shared:
+            source = chat_manager.get_existing_session_by_session_id(session_id)
+            if source is not None and source.is_group_session:
+                groups.append(source.session_id)
+        return frozenset(groups)
 
     def _is_chat_memory_allowed(self, source_session_id: str, current_session: BotChatSession) -> bool:
         clean_source_session_id = str(source_session_id or "").strip()

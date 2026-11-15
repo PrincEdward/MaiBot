@@ -682,6 +682,12 @@ def _get_chat_prompt_details(chat_session: ChatSession) -> Dict[str, Any]:
     base_prompt_type = "group" if is_group_chat else "private"
     base_prompt_title = "群聊提示词" if is_group_chat else "私聊提示词"
     base_prompt = reply_style_config.group_chat_prompt if is_group_chat else reply_style_config.private_chat_prompts
+    if is_group_chat and chat_session.platform == "bilibili":
+        from src.maisaka.scenes.factory import get_prompt_profile
+
+        base_prompt_type = "live"
+        base_prompt_title = "直播间提示词"
+        base_prompt = get_prompt_profile(True, chat_session.session_id).attention_text()
     chat_prompts = []
     for index, chat_prompt_item in enumerate(reply_style_config.chat_prompts):
         prompt_config = _chat_prompt_item_values(chat_prompt_item)

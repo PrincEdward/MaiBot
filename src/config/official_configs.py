@@ -3,6 +3,7 @@ from typing import Any, Dict, List, Literal, Optional
 import re
 
 from .config_base import ConfigBase, Field
+from .live_defaults import DEFAULT_LIVE_CHAT_PROMPT
 
 RULE_TYPE_OPTION_DESCRIPTIONS = {
     "group": "群聊聊天流，item_id 填群号或群聊 ID",
@@ -156,6 +157,8 @@ class PersonalityProfile(ConfigBase):
     """行为风格。"""
     reply_style: str
     """表达风格。"""
+    live_chat_prompt: str = DEFAULT_LIVE_CHAT_PROMPT
+    """直播间提示词，旧人设缺失时使用默认值。"""
     group_chat_prompt: str
     """群聊提示词。"""
     private_chat_prompts: str
@@ -864,6 +867,15 @@ class ChatReplyStyleConfig(ConfigBase):
         },
     )
     """_wrap_群聊通用提示词，告诉麦麦群聊中该怎么说话。"""
+
+    live_chat_prompt: str = Field(
+        default=DEFAULT_LIVE_CHAT_PROMPT,
+        json_schema_extra={
+            "label": {"zh_CN": "直播间提示词", "en_US": "Live room prompt", "ja_JP": "配信ルームプロンプト"},
+            "x-widget": "textarea",
+        },
+    )
+    """_wrap_直播间沿用群聊调度，使用此提示词参与公开弹幕聊天。"""
 
     private_chat_prompts: str = Field(
         default=(

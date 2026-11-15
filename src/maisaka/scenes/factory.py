@@ -4,6 +4,7 @@ from typing import TYPE_CHECKING, Optional
 
 from .base import ChatScene
 from .group.behavior import GroupChatScene
+from .group.prompting import LiveGroupPromptProfile
 from .private.behavior import PrivateChatScene
 from .prompting import ChatPromptProfile, UnscopedPromptProfile
 
@@ -13,6 +14,7 @@ if TYPE_CHECKING:
 
 _GROUP = GroupChatScene()
 _PRIVATE = PrivateChatScene()
+_LIVE_PROMPTS = LiveGroupPromptProfile()
 _UNSCOPED_PROMPTS = UnscopedPromptProfile()
 
 
@@ -33,7 +35,13 @@ def get_session_scene(session_id: str) -> ChatScene:
     return get_scene(session.is_group_session)
 
 
-def get_prompt_profile(is_group: Optional[bool]) -> ChatPromptProfile:
+def get_prompt_profile(is_group: Optional[bool], session_id: str = "") -> ChatPromptProfile:
+    if is_group is True and session_id:
+        from src.chat.message_receive.chat_manager import chat_manager
+
+        session = chat_manager.get_session_by_session_id(session_id)
+        if session is not None and session.is_group_session and session.platform == "bilibili":
+            return _LIVE_PROMPTS
     return _UNSCOPED_PROMPTS if is_group is None else get_scene(is_group).prompts
 
 

@@ -592,11 +592,12 @@ function BotConfigPageContent() {
   void handleSaveAndRestart
 
   const savePersonality = async (value: ConfigSectionData) => {
-    const { group_chat_prompt, private_chat_prompts, ...personality } = value
+    const { live_chat_prompt, group_chat_prompt, private_chat_prompts, ...personality } = value
     const chat = {
       ...sectionValues.chat,
       reply_style: {
         ...(sectionValues.chat?.reply_style as ConfigSectionData),
+        live_chat_prompt,
         group_chat_prompt,
         private_chat_prompts,
       },
@@ -1180,7 +1181,7 @@ function DynamicConfigTabs(props: DynamicConfigTabsProps) {
   ) : null
 
   const identityFieldNames = new Set(['nickname', 'alias_names'])
-  const basicChatPromptFieldNames = new Set(['group_chat_prompt', 'private_chat_prompts'])
+  const basicChatPromptFieldNames = new Set(['live_chat_prompt', 'group_chat_prompt', 'private_chat_prompts'])
   const botSchema = configSchema.nested.bot
   const replyStyleSchema = configSchema.nested.chat?.nested?.reply_style
   const personalitySchema = configSchema.nested.personality
@@ -1232,6 +1233,7 @@ function DynamicConfigTabs(props: DynamicConfigTabsProps) {
         <PersonalityProfiles
           values={{
             ...sectionValues.personality,
+            live_chat_prompt: (sectionValues.chat?.reply_style as ConfigSectionData)?.live_chat_prompt,
             group_chat_prompt: (sectionValues.chat?.reply_style as ConfigSectionData)?.group_chat_prompt,
             private_chat_prompts: (sectionValues.chat?.reply_style as ConfigSectionData)?.private_chat_prompts,
           }}

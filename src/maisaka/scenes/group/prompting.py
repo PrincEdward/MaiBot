@@ -2,6 +2,7 @@
 
 from src.config.config import global_config
 from src.config.official_configs import AttentionDriftConfig
+from src.config.live_defaults import DEFAULT_LIVE_CHAT_PROMPT, LIVE_CHAT_PROMPTS
 from src.maisaka.scenes.prompting import ChatPromptProfile, localized_text
 
 
@@ -38,3 +39,11 @@ class GroupPromptProfile(ChatPromptProfile):
     def select_chat_reply_template(self, *, self_reply: bool, mai_replier: bool) -> str:
         # 专用模板沿用 Mai Replier 的训练文案。
         return "reply_group_mai_replier" if mai_replier else "reply_group"
+
+
+class LiveGroupPromptProfile(GroupPromptProfile):
+    """Only language guidance differs; live rooms retain the native group behavior."""
+
+    def attention_text(self) -> str:
+        prompt = global_config.chat.reply_style.live_chat_prompt
+        return localized_text(LIVE_CHAT_PROMPTS) if prompt == DEFAULT_LIVE_CHAT_PROMPT else prompt

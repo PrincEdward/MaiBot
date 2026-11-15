@@ -242,6 +242,8 @@ class PersonFactWritebackService:
         user_info = getattr(getattr(message, "message_info", None), "user_info", None)
         user_id = str(getattr(user_info, "user_id", "") or getattr(message, "user_id", "") or "").strip()
 
+        if platform == "bilibili" and user_id.startswith("audio:"):
+            return None  # A mixed live-audio transcript does not identify a person.
         if not platform or not user_id or is_bot_self(platform, user_id):
             return None
         person_id = get_person_id(platform, user_id)
@@ -320,6 +322,8 @@ class PersonFactWritebackService:
             platform = str(getattr(item, "platform", "") or "").strip()
             user_info = getattr(getattr(item, "message_info", None), "user_info", None)
             user_id = str(getattr(user_info, "user_id", "") or getattr(item, "user_id", "") or "").strip()
+            if platform == "bilibili" and user_id.startswith("audio:"):
+                continue
             if not platform or not user_id or is_bot_self(platform, user_id):
                 continue
             if target_person_id and get_person_id(platform, user_id) != target_person_id:

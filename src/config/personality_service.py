@@ -13,7 +13,7 @@ from .official_configs import ChatReplyStyleConfig, PersonalityConfig, Personali
 
 _switch_lock = asyncio.Lock()
 _FIELDS = {"personality", "behavior_style", "reply_style", "multiple_reply_style", "multiple_probability"}
-_CHAT_FIELDS = {"group_chat_prompt", "private_chat_prompts"}
+_CHAT_FIELDS = {"group_chat_prompt", "live_chat_prompt", "private_chat_prompts"}
 
 
 def current_profile(config: PersonalityConfig, reply_style: ChatReplyStyleConfig) -> Dict[str, Any]:
