@@ -38,28 +38,36 @@ class GroupTurnScheduler(MessageTurnScheduler):
         self._dynamic_reply_gate.record_reply()
 
     def record_cycle_result(self, cycle_end_reason: str) -> None:
-        self._idle_backoff.record_cycle_result(cycle_end_reason)
+        if self._runtime.chat_stream.platform != "bilibili":
+            self._idle_backoff.record_cycle_result(cycle_end_reason)
 
     def reset_backoff(self) -> None:
         self._idle_backoff.reset()
 
     def _evaluate_scene(self, pending_count: int, frequency: float) -> TurnGateResult:
         runtime = self._runtime
+        pending_messages = runtime.message_cache[runtime._last_processed_index :]
         if runtime._has_forced_turn_trigger():
             # @ 强制触发的回复同样占用动态门控的回复额度
-            self._dynamic_reply_gate.record_forced_turn(runtime.message_cache[runtime._last_processed_index :])
+            self._dynamic_reply_gate.record_forced_turn(pending_messages)
             return TurnGateResult(decision="trigger", detail=f"调度=强制触发 频率={frequency:.3f}")
 
-        backoff_seconds = self._idle_backoff.get_delay_seconds(pending_count)
-        if backoff_seconds > 0:
-            return TurnGateResult(
-                decision="delay",
-                detail=f"空闲退避中 剩余={backoff_seconds:.2f}s",
-                delay_seconds=backoff_seconds,
-            )
+        if runtime.chat_stream.platform == "bilibili":
+            # 直播适配器按账号标记主播弹幕，并为主播麦克风转写设置相同标记。
+            if any(message.message_info.additional_config.get("is_anchor") is True for message in pending_messages):
+                self._dynamic_reply_gate.record_forced_turn(pending_messages)
+                return TurnGateResult(decision="trigger", detail="调度=主播新发言 判定=进入Planner")
+        else:
+            backoff_seconds = self._idle_backoff.get_delay_seconds(pending_count)
+            if backoff_seconds > 0:
+                return TurnGateResult(
+                    decision="delay",
+                    detail=f"空闲退避中 剩余={backoff_seconds:.2f}s",
+                    delay_seconds=backoff_seconds,
+                )
 
         dynamic_result = self._dynamic_reply_gate.evaluate(
-            pending_messages=runtime.message_cache[runtime._last_processed_index :],
+            pending_messages=pending_messages,
             frequency=frequency,
         )
         return TurnGateResult(
