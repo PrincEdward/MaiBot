@@ -5,14 +5,12 @@ import pytest
 import tomlkit
 
 from src.chat.message_receive.chat_manager import chat_manager
-from src.config.config import global_config
 from src.config.live_defaults import DEFAULT_LIVE_CHAT_PROMPT, LIVE_CHAT_PROMPTS
 from src.config.official_configs import ChatReplyStyleConfig, PersonalityProfile
 from src.config.personality_service import persist_switch
 from src.maisaka.memory.heuristic_injector import HeuristicMemoryContext, HeuristicMemoryInjector
 from src.maisaka.scenes.factory import get_prompt_profile, get_scene
 from src.maisaka.scenes.group.scheduling import GroupTurnScheduler
-from src.maisaka.turn_trigger.gates import TurnGateResult
 from src.services.memory_service import MemoryHit, MemorySearchResult
 
 
@@ -30,42 +28,48 @@ def test_live_prompt_keeps_native_group_scene_and_other_prompts(monkeypatch):
     assert set(LIVE_CHAT_PROMPTS) == {"zh-CN", "en-US", "ja-JP"}
 
 
-@pytest.mark.parametrize("platform", ["bilibili", "qq"])
-def test_live_anchor_enters_planner_without_idle_backoff(monkeypatch, platform):
-    timing = global_config.chat.reply_timing
-    monkeypatch.setattr(timing, "no_action_backoff_start_count", 3)
-    monkeypatch.setattr(timing, "no_action_backoff_base_seconds", 10)
-    monkeypatch.setattr(timing, "no_action_backoff_cap_seconds", 60)
-    monkeypatch.setattr(timing, "no_action_backoff_bypass_pending_count", 6)
-    viewer = SimpleNamespace(message_info=SimpleNamespace(additional_config={"is_anchor": False}))
-    anchor = SimpleNamespace(message_info=SimpleNamespace(additional_config={"is_anchor": True}))
+@pytest.mark.parametrize("platform,expected", [("bilibili", "trigger"), ("qq", "wait")])
+def test_live_anchor_reaches_planner_after_debounce(monkeypatch, platform, expected):
+    def message(message_id, is_anchor=False):
+        return SimpleNamespace(
+            message_id=message_id,
+            platform=platform,
+            message_info=SimpleNamespace(
+                user_info=SimpleNamespace(user_id=message_id),
+                additional_config={"is_anchor": is_anchor},
+            ),
+        )
+
+    viewer = message("viewer")
+    anchor = message("anchor", is_anchor=True)
     quiet_period = Mock(return_value=5.0)
     runtime = SimpleNamespace(
         chat_stream=session(platform, "group"), message_cache=[viewer], _last_processed_index=0,
         _agent_state="stop", _STATE_WAIT="wait", _get_message_quiet_period_remaining_seconds=quiet_period,
-        _has_forced_turn_trigger=lambda: False, _is_focus_mode_active_for_current_chat=lambda: False,
-        _is_reply_frequency_silent=lambda: False, _get_effective_reply_frequency=lambda: 1.0,
+        _has_forced_turn_trigger=lambda: False, _fixed_message_debouncer=SimpleNamespace(consume=Mock()),
+        _is_reply_frequency_silent=lambda: False, _get_effective_reply_frequency=lambda: 0.5,
         log_prefix="test",
     )
     scheduler = GroupTurnScheduler(runtime)
-    scheduler._dynamic_reply_gate = Mock(evaluate=Mock(return_value=TurnGateResult("wait", "观众门控")))
-    for _ in range(8):
-        scheduler.record_cycle_result("planner_no_tool_end")
+    monkeypatch.setattr(scheduler, "_arm_silence_check", Mock())
+    monkeypatch.setattr("src.maisaka.turn_trigger.messages.get_online_bot_accounts", lambda _: set())
+    draw = Mock(return_value=0.9)
+    monkeypatch.setattr("src.maisaka.scenes.group.scheduling.random.random", draw)
+    assert scheduler.allows_timed_wakeup is (platform == "qq")
+    scheduler._round_debt = 1
 
     quiet_period.return_value = 0.0
-    if platform == "qq":
-        assert scheduler._evaluate(1).delay_seconds > 59
-        scheduler._dynamic_reply_gate.evaluate.assert_not_called()
-        return
-
     assert scheduler._evaluate(1).decision == "wait"
-    scheduler._dynamic_reply_gate.evaluate.assert_called_once()
+    draw.assert_called_once()
     runtime.message_cache.append(anchor)
     quiet_period.return_value = 5.0
     assert scheduler._evaluate(2).delay_seconds == 5.0
     quiet_period.return_value = 0.0
-    assert scheduler._evaluate(2).decision == "trigger"
-    scheduler._dynamic_reply_gate.record_forced_turn.assert_called_once_with([viewer, anchor])
+    assert scheduler._evaluate(2).decision == expected
+    assert draw.call_count == (1 if platform == "bilibili" else 2)
+    assert scheduler._evaluate(2).decision == "wait"
+    runtime.message_cache.append(message("another-viewer"))
+    assert scheduler._evaluate(3).decision == "wait"
 
 
 def test_old_profile_import_and_switch_preserve_live_prompt(tmp_path):

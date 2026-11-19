@@ -41,14 +41,17 @@ class PolicyTests(unittest.TestCase):
             self.assertTrue(restarted.valid(token))
             self.assertEqual(restarted.login_origin(token), 'http://127.0.0.1:8001')
         with closing(sqlite3.connect(self.sessions._path)) as db:
-            self.assertEqual(db.execute('SELECT expires_at FROM sessions').fetchone()[0], 0)
+            self.assertEqual(db.execute('SELECT origin FROM sessions').fetchone()[0], 'http://127.0.0.1:8001')
 
     def test_migration_preserves_active_but_never_revives_expired(self):
         with closing(sqlite3.connect(self.sessions._path)) as db, db:
-            for token, expiry in [('old-active', time.time()+300), ('old-expired', time.time()-300)]:
-                db.execute('INSERT INTO sessions VALUES(?,?,?)', (self.sessions._digest(token), expiry, None))
+            db.execute('ALTER TABLE sessions ADD COLUMN expires_at REAL NOT NULL DEFAULT 0')
+            for token, expiry in [('old-active', time.time()+300), ('old-expired', time.time()-300), ('local-permanent', 0)]:
+                db.execute('INSERT INTO sessions(digest, expires_at, origin) VALUES(?,?,?)',
+                           (self.sessions._digest(token), expiry, None))
         restarted = self.restart()
         self.assertTrue(restarted.valid('old-active'))
+        self.assertTrue(restarted.valid('local-permanent'))
         self.assertFalse(restarted.valid('old-expired'))
 
     def test_revoke_only_current_session_and_clear_all(self):
@@ -82,7 +85,7 @@ class PolicyTests(unittest.TestCase):
         async def require_session(request: Request):
             if not sessions.valid(request.cookies.get(sessions.cookie_name)):
                 raise HTTPException(401)
-        register_host_auth(app, sessions, self.credentials, require_session)
+        register_host_auth(app, sessions, self.credentials, require_session, lambda _: "127.0.0.1")
         @app.get('/api/private')
         async def private(request: Request):
             await require_session(request)
